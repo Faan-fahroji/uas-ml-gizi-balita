@@ -89,7 +89,7 @@ st.sidebar.info(f"Dataset aktif: **{DATA_FILE}**")
 if menu == "🏠 Beranda":
     st.title("🧒📊 Dashboard Analisis Status Gizi Balita 2023")
     st.write(
-        "Dashboard ini digunakan untuk menganalisis wilayah kerawanan status gizi balita "
+        "Dashboard ini digunakan untuk menganalisis wilayah kerawang status gizi balita "
         "berdasarkan indikator **Sangat Kurang (SK)** dan **Kurang (K)**."
     )
 
@@ -215,3 +215,4 @@ elif menu == "🎯 Analisis Clustering":
 # =============================
 st.sidebar.markdown("---")
 st.sidebar.caption("© 2025 UAS Machine Learning – Status Gizi Balita")
+
