@@ -19,43 +19,19 @@ st.set_page_config(
     layout="wide",
 )
 
-st.st.markdown("""
-<style>
-/* Background aplikasi (biar konsisten) */
-.main { 
-    background-color: #0e1117; /* cocok buat dark */
-}
-
-/* Kartu metric */
-div[data-testid="stMetric"] {
-    background: #ffffff !important;
-    padding: 16px !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(0,0,0,0.08) !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.10) !important;
-}
-
-/* Label metric (judul kecil) */
-div[data-testid="stMetric"] label,
-div[data-testid="stMetric"] p {
-    color: #555555 !important;
-    font-weight: 600 !important;
-}
-
-/* Angka metric (nilai besar) */
-div[data-testid="stMetric"] div {
-    color: #111111 !important;
-    font-weight: 800 !important;
-}
-
-/* Kadang Streamlit bungkus angka di span */
-div[data-testid="stMetric"] span {
-    color: #111111 !important;
-    font-weight: 800 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
+st.markdown(
+    """
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stMetric {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # -----------------------------
@@ -248,4 +224,3 @@ elif menu == "🎯 Analisis Clustering":
 
     st.subheader("🔎 Data dengan Cluster")
     st.dataframe(df_used, use_container_width=True)
-
