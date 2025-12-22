@@ -1,125 +1,217 @@
-import re, textwrap, os
+import streamlit as st
+import pandas as pd
+import numpy as np
 
-enhanced_block = textwrap.dedent("""\
-    elif menu == "📊 Visualisasi Distribusi":
-        st.header("📊 Visualisasi Distribusi")
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import seaborn as sns
 
-        # Filter Kabupaten
-        kab_list = sorted(dfc["Kabupaten"].unique().tolist())
-        kab_filter = st.multiselect("Filter Kabupaten:", kab_list, default=kab_list)
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
-        view_df = dfc[dfc["Kabupaten"].isin(kab_filter)].copy()
-
-        # =========================
-        # 1) Top Kecamatan (bar)
-        # =========================
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("Top 10 Kecamatan (Total Kasus)")
-            top = view_df.sort_values("Total Kasus", ascending=False).head(10)
-            fig, ax = plt.subplots(figsize=(8, 5))
-            sns.barplot(data=top, x="Kecamatan", y="Total Kasus", ax=ax)
-            plt.xticks(rotation=60, ha="right")
-            ax.set_xlabel("Kecamatan")
-            ax.set_ylabel("Total Kasus (SK+K)")
-            st.pyplot(fig)
-
-        with col2:
-            st.subheader("Komposisi Rata-rata (SK vs K)")
-            avg_vals = view_df[["Sangat Kurang", "Kurang"]].mean()
-            fig2, ax2 = plt.subplots(figsize=(6, 6))
-            ax2.pie(avg_vals, labels=avg_vals.index, autopct="%1.1f%%", startangle=140)
-            st.pyplot(fig2)
-
-        st.markdown("---")
-
-        # =========================
-        # 2) Scatter plot SK vs K (dengan cluster)
-        # =========================
-        st.subheader("Scatter: Sangat Kurang vs Kurang (berdasarkan Cluster)")
-        fig3, ax3 = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(
-            data=view_df, x="Sangat Kurang", y="Kurang",
-            hue="Cluster", palette="viridis", s=140, ax=ax3
-        )
-        ax3.grid(True, linestyle="--", alpha=0.4)
-        st.pyplot(fig3)
-
-        st.markdown("---")
-
-        # =========================
-        # 3) Distribusi Total Kasus (histogram)
-        # =========================
-        st.subheader("Distribusi Total Kasus")
-        fig4, ax4 = plt.subplots(figsize=(10, 5))
-        sns.histplot(data=view_df, x="Total Kasus", kde=True, ax=ax4)
-        ax4.set_xlabel("Total Kasus (SK+K)")
-        ax4.set_ylabel("Frekuensi")
-        ax4.grid(True, linestyle="--", alpha=0.25)
-        st.pyplot(fig4)
-
-        # =========================
-        # 4) Boxplot Total Kasus per Cluster
-        # =========================
-        st.subheader("Perbandingan Total Kasus per Cluster (Boxplot)")
-        fig5, ax5 = plt.subplots(figsize=(10, 5))
-        sns.boxplot(data=view_df, x="Cluster", y="Total Kasus", ax=ax5)
-        ax5.set_xlabel("Cluster")
-        ax5.set_ylabel("Total Kasus (SK+K)")
-        ax5.grid(True, linestyle="--", alpha=0.25)
-        st.pyplot(fig5)
-
-        st.markdown("---")
-
-        # =========================
-        # 5) Jumlah Kecamatan per Cluster (countplot)
-        # =========================
-        st.subheader("Jumlah Kecamatan per Cluster")
-        fig6, ax6 = plt.subplots(figsize=(10, 5))
-        sns.countplot(data=view_df, x="Cluster", ax=ax6)
-        ax6.set_xlabel("Cluster")
-        ax6.set_ylabel("Jumlah Kecamatan")
-        ax6.grid(True, linestyle="--", alpha=0.25)
-        st.pyplot(fig6)
-
-        # =========================
-        # 6) Korelasi fitur numerik (heatmap)
-        # =========================
-        st.subheader("Korelasi Indikator (Heatmap)")
-        num_cols = ["Sangat Kurang", "Kurang", "Total Kasus"]
-        corr = view_df[num_cols].corr(numeric_only=True)
-
-        fig7, ax7 = plt.subplots(figsize=(6, 4))
-        sns.heatmap(corr, annot=True, fmt=".2f", ax=ax7)
-        st.pyplot(fig7)
-
-    # =============================
-    # HALAMAN: ANALISIS CLUSTERING
-    # =============================
-    elif menu == "🎯 Analisis Clustering":
-""")
-
-app2 = re.sub(
-    r"elif menu == \"📊 Visualisasi Distribusi\":.*?elif menu == \"🎯 Analisis Clustering\":",
-    enhanced_block,
-    app,
-    flags=re.S
+# =============================
+# KONFIGURASI HALAMAN
+# =============================
+st.set_page_config(
+    page_title="Analisis Status Gizi Balita 2023",
+    page_icon="🧒📊",
+    layout="wide",
 )
 
-with open(app_path,'w',encoding='utf-8') as f:
-    f.write(app2)
+# =============================
+# CSS FINAL (FIX METRIC DARK MODE)
+# =============================
+st.markdown("""
+<style>
+.main { background-color: #0e1117; }
 
-# re-zip
-zip_out="/mnt/data/gizi_balita_streamlit_project_v2.zip"
-if os.path.exists(zip_out):
-    os.remove(zip_out)
-with zipfile.ZipFile(zip_out,'w',zipfile.ZIP_DEFLATED) as z:
-    for root, dirs, files in os.walk(work):
-        for file in files:
-            full=os.path.join(root,file)
-            rel=os.path.relpath(full, work)
-            z.write(full, arcname=rel)
+/* Kartu metric */
+div[data-testid="stMetric"] {
+    background: #ffffff !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+}
 
-zip_out
+/* Label metric */
+div[data-testid="stMetric"] label,
+div[data-testid="stMetric"] p {
+    color: #555555 !important;
+    font-weight: 600 !important;
+}
 
+/* Nilai metric */
+div[data-testid="stMetric"] div,
+div[data-testid="stMetric"] span {
+    color: #111111 !important;
+    font-weight: 800 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =============================
+# PATH DATASET
+# =============================
+DATA_FILE = "Hasil_Clustering.csv"
+
+# =============================
+# LOAD DATA
+# =============================
+@st.cache_data
+def load_data(path):
+    df = pd.read_csv(path)
+    df.columns = df.columns.astype(str).str.strip()
+    return df
+
+try:
+    df = load_data(DATA_FILE)
+except Exception as e:
+    st.error(f"Gagal memuat dataset '{DATA_FILE}'. Pastikan file satu folder dengan app.py.\n\n{e}")
+    st.stop()
+
+# =============================
+# SIDEBAR
+# =============================
+st.sidebar.title("Menu Utama")
+menu = st.sidebar.radio(
+    "Pilih Halaman:",
+    ["🏠 Beranda", "📋 Ringkasan Data", "📊 Visualisasi Distribusi", "🎯 Analisis Clustering"]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.info(f"Dataset aktif: **{DATA_FILE}**")
+
+# =============================
+# BERANDA
+# =============================
+if menu == "🏠 Beranda":
+    st.title("🧒📊 Dashboard Analisis Status Gizi Balita 2023")
+    st.write(
+        "Dashboard ini digunakan untuk menganalisis wilayah karawang status gizi balita "
+        "berdasarkan indikator **Sangat Kurang (SK)** dan **Kurang (K)**."
+    )
+
+    st.success(f"Data berhasil dimuat: {len(df):,} baris, {len(df.columns):,} kolom")
+    st.subheader("Preview Data")
+    st.dataframe(df.head(20), use_container_width=True)
+
+# =============================
+# RINGKASAN DATA
+# =============================
+elif menu == "📋 Ringkasan Data":
+    st.header("📋 Ringkasan Data")
+
+    # Deteksi kolom penting
+    cols = df.columns.str.lower().tolist()
+    sk_col = next((c for c in df.columns if c.lower() in ["sangat kurang", "sangat_kurang"]), None)
+    k_col  = next((c for c in df.columns if c.lower() in ["kurang"]), None)
+
+    if sk_col and k_col:
+        dfx = df.copy()
+        dfx[sk_col] = pd.to_numeric(dfx[sk_col], errors="coerce")
+        dfx[k_col]  = pd.to_numeric(dfx[k_col], errors="coerce")
+        dfx["Total Kasus"] = dfx[sk_col] + dfx[k_col]
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Total Kasus (SK + K)", f"{int(dfx['Total Kasus'].sum()):,}")
+        col2.metric("Rata-rata Total", f"{dfx['Total Kasus'].mean():.2f}")
+        col3.metric("Nilai SK Tertinggi", f"{int(dfx[sk_col].max()):,}")
+        col4.metric("Jumlah Data", f"{len(dfx):,}")
+
+        st.markdown("---")
+        st.subheader("Data Lengkap")
+        st.dataframe(dfx, use_container_width=True)
+
+        st.subheader("Statistik Deskriptif")
+        st.write(dfx[[sk_col, k_col, "Total Kasus"]].describe())
+
+    else:
+        st.warning("Kolom 'Sangat Kurang' dan 'Kurang' tidak terdeteksi.")
+        st.dataframe(df, use_container_width=True)
+
+# =============================
+# VISUALISASI DISTRIBUSI
+# =============================
+elif menu == "📊 Visualisasi Distribusi":
+    st.header("📊 Visualisasi Distribusi")
+
+    numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+    if len(numeric_cols) < 2:
+        st.error("Kolom numerik tidak cukup untuk visualisasi.")
+        st.stop()
+
+    x_col = st.selectbox("Sumbu X", numeric_cols, index=0)
+    y_col = st.selectbox("Sumbu Y", numeric_cols, index=1)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.scatterplot(data=df, x=x_col, y=y_col, s=130, ax=ax)
+    ax.grid(True, linestyle="--", alpha=0.4)
+    st.pyplot(fig)
+
+# =============================
+# ANALISIS CLUSTERING
+# =============================
+elif menu == "🎯 Analisis Clustering":
+    st.header("🎯 Analisis Clustering (K-Means)")
+
+    numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
+    features = st.multiselect(
+        "Pilih fitur numerik:",
+        numeric_cols,
+        default=numeric_cols[:2]
+    )
+
+    if len(features) < 2:
+        st.warning("Minimal pilih 2 fitur.")
+        st.stop()
+
+    k = st.sidebar.slider("Jumlah Cluster (K)", 2, 6, 3)
+
+    X = df[features].apply(pd.to_numeric, errors="coerce").dropna()
+    df_used = df.loc[X.index].copy()
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    model = KMeans(n_clusters=k, random_state=42, n_init=10)
+    df_used["Cluster"] = model.fit_predict(X_scaled)
+
+    # PCA
+    pca = PCA(n_components=2)
+    reduced = pca.fit_transform(X_scaled)
+
+    st.subheader("🗺️ Visualisasi Cluster (PCA)")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = cm.get_cmap("tab10")
+
+    for i in range(k):
+        pts = reduced[df_used["Cluster"] == i]
+        ax.scatter(
+            pts[:, 0], pts[:, 1],
+            s=160,
+            label=f"Cluster {i}",
+            color=colors(i / 10),
+            edgecolors="white"
+        )
+
+    centroids = pca.transform(model.cluster_centers_)
+    ax.scatter(centroids[:, 0], centroids[:, 1],
+               c="black", s=350, marker="X", label="Centroid")
+
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.35)
+    st.pyplot(fig)
+
+    st.subheader("📋 Rata-rata Tiap Cluster")
+    st.dataframe(df_used.groupby("Cluster")[features].mean(), use_container_width=True)
+
+    st.subheader("🔍 Data dengan Cluster")
+    st.dataframe(df_used, use_container_width=True)
+
+# =============================
+# FOOTER
+# =============================
+st.sidebar.markdown("---")
+st.sidebar.caption("© 2025 UAS Machine Learning – Status Gizi Balita")
