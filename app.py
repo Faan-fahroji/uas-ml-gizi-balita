@@ -87,8 +87,7 @@ st.sidebar.info(f"Dataset aktif: **{DATA_FILE}**")
 # BERANDA
 # =============================
 if menu == "🏠 Beranda":
-    st.title("🧒📊 Analisis Clustering Status Gizi Balita Berdasarkan Berat Badan Sangat
-Kurang dan Kurang Menggunakan Algoritma K-Means di Kabupaten Purwakarta dan Karawang, 2023")
+    st.title("🧒📊 Dashboard Analisis Status Gizi Balita 2023")
     st.write(
         "Dashboard ini digunakan untuk menganalisis wilayah karawang status gizi balita "
         "berdasarkan indikator **Sangat Kurang (SK)** dan **Kurang (K)**."
